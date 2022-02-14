@@ -51,7 +51,9 @@ var State = (() => { // eslint-disable-line no-unused-vars, no-var
 		_active      = momentCreate();
 		_activeIndex = -1;
 		_expired     = [];
-		_prng        = _prng === null ? null : new PRNGWrapper(_prng.seed, false);
+		/* Jimmy: CHANGES: Have the PRNG object return a copy of the original.
+			Old: _prng = _prng === null ? null : new PRNGWrapper(_prng.seed, false); */
+		_prng        = _prng === null ? null : new PRNGWrapper('', { state: _prng.state() });
 	}
 
 	/*
@@ -107,10 +109,6 @@ var State = (() => { // eslint-disable-line no-unused-vars, no-var
 			stateObj.expired = [..._expired];
 		}
 
-		if (_prng !== null) {
-			stateObj.seed = _prng.seed;
-		}
-
 		return stateObj;
 	}
 
@@ -133,28 +131,12 @@ var State = (() => { // eslint-disable-line no-unused-vars, no-var
 			throw new Error('state object has no index');
 		}
 
-		if (_prng !== null && !stateObj.hasOwnProperty('seed')) {
-			throw new Error('state object has no seed, but PRNG is enabled');
-		}
-
-		if (_prng === null && stateObj.hasOwnProperty('seed')) {
-			throw new Error('state object has seed, but PRNG is disabled');
-		}
-
 		/*
 			Restore the properties.
 		*/
 		_history     = noDelta ? clone(stateObj.history) : historyDeltaDecode(stateObj.delta);
 		_activeIndex = stateObj.index;
 		_expired     = stateObj.hasOwnProperty('expired') ? [...stateObj.expired] : [];
-
-		if (stateObj.hasOwnProperty('seed')) {
-			/*
-				We only need to restore the PRNG's seed here as `momentActivate()` will handle
-				fully restoring the PRNG to its proper state.
-			*/
-			_prng.seed = stateObj.seed;
-		}
 
 		/*
 			Activate the current moment (do this only after all properties have been restored).
@@ -293,15 +275,15 @@ var State = (() => { // eslint-disable-line no-unused-vars, no-var
 
 		/*
 			Restore the seedable PRNG.
-
-			NOTE: We cannot simply set `_prng.pull` to `_active.pull` as that would
-			not properly mutate the PRNG's internal state.
 		*/
 		if (_prng !== null) {
-			_prng = PRNGWrapper.unmarshal({
-				seed : _prng.seed,
-				pull : _active.pull
-			});
+			/* Jimmy: CHANGES: Stop the history being pushed onto _expire here.
+				Old: _expired.push(_history.shift().title); */
+			if (_active.hasOwnProperty('prng')) {
+				_prng = PRNGWrapper.unmarshal({
+					state : _active.prng
+				});
+			}
 		}
 
 		/*
@@ -443,7 +425,9 @@ var State = (() => { // eslint-disable-line no-unused-vars, no-var
 		_history.push(momentCreate(title, _active.variables));
 
 		if (_prng) {
-			historyTop().pull = _prng.pull;
+			/* Jimmy: CHANGES: Assign prng state to the moment's prng property. 
+				Old: historyTop().pull = _prng.pull; */
+			historyTop().prng = _prng.state();
 		}
 
 		/*
@@ -562,20 +546,15 @@ var State = (() => { // eslint-disable-line no-unused-vars, no-var
 			throw new Error(`State.prng.init must be called during initialization, within either ${scriptSection} or the StoryInit special passage`);
 		}
 
-		_prng = new PRNGWrapper(seed, useEntropy);
-		_active.pull = _prng.pull;
+		/* Jimmy: CHANGES: Regenerate the PRNG object, then assign the state to the active moment.
+			Old: _prng = new PRNGWrapper(seed, useEntropy);
+				 _active.pull = _prng.pull; */
+		_prng = new PRNGWrapper(seed, { state: true, entropy: useEntropy });
+		_active.prng = _prng.state();
 	}
 
 	function prngIsEnabled() {
 		return _prng !== null;
-	}
-
-	function prngPull() {
-		return _prng ? _prng.pull : NaN;
-	}
-
-	function prngSeed() {
-		return _prng ? _prng.seed : null;
 	}
 
 	function prngRandom() {
@@ -762,8 +741,9 @@ var State = (() => { // eslint-disable-line no-unused-vars, no-var
 			value : Object.freeze(Object.defineProperties({}, {
 				init      : { value : prngInit },
 				isEnabled : { value : prngIsEnabled },
-				pull      : { get : prngPull },
-				seed      : { get : prngSeed }
+				/* Jimmy: CHANGES: Removal of redundant functions due to PRNG update. 
+					Old: pull: { get: prngPull },
+						 seed: { get: prngSeed } */
 			}))
 		},
 		random : { value : prngRandom },

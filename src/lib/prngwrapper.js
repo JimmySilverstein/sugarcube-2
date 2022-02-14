@@ -14,61 +14,59 @@ var PRNGWrapper = (() => { // eslint-disable-line no-unused-vars, no-var
 		PRNGWrapper Class.
 	*******************************************************************************************************************/
 	class PRNGWrapper {
-		constructor(seed, useEntropy) {
+		constructor(seed, options) {
 			/* eslint-disable new-cap */
-			Object.defineProperties(this, new Math.seedrandom(seed, useEntropy, (prng, seed) => ({
-				_prng : {
-					value : prng
+			/* Jimmy: CHANGES: Create the Math.seedrandom initialisation to use the state object. */
+			const prngObj = new Math.seedrandom(seed, options);
+			Object.defineProperties(this, {
+				_prng: {
+					value: prngObj
 				},
-
-				seed : {
-					/*
-						TODO: Make this non-writable.
-					*/
-					writable : true,
-					value    : seed
+				state: {
+					value: prngObj.state
 				},
-
-				pull : {
-					writable : true,
-					value    : 0
-				},
-
-				random : {
+				random: {
 					value() {
-						++this.pull;
 						return this._prng();
 					}
 				}
-			})));
+			});
 			/* eslint-enable new-cap */
 		}
 
 		static marshal(prng) {
-			if (!prng || !prng.hasOwnProperty('seed') || !prng.hasOwnProperty('pull')) {
+			/* Jimmy: CHANGES: Modify warning message so that it instead checks for only the new state property.
+				Old: if (!prng || !prng.hasOwnProperty('seed') || !prng.hasOwnProperty('pull')) { */
+			if (!prng || !prng.hasOwnProperty('state')) {
 				throw new Error('PRNG is missing required data');
 			}
 
+			/* Jimmy: CHANGES: Only return the state of the PRNG object.
+				Old: seed : prng.seed,
+					 pull : prng.pull */
 			return {
-				seed : prng.seed,
-				pull : prng.pull
+				prng: prng.state()
 			};
 		}
 
 		static unmarshal(prngObj) {
-			if (!prngObj || !prngObj.hasOwnProperty('seed') || !prngObj.hasOwnProperty('pull')) {
-				throw new Error('PRNG object is missing required data');
+			/* Jimmy: CHANGES: Modify warning message so that it instead checks for only the new state property.
+					Old: if (!prngObj || !prngObj.hasOwnProperty('seed') || !prngObj.hasOwnProperty('pull')) {
+							 throw new Error('PRNG object is missing required data'); */
+			if (!prngObj || !prngObj.hasOwnProperty('state')) {
+				throw new Error('PRNG object is missing required state data');
 			}
 
 			/*
 				Create a new PRNG using the original seed and pull values from it until it
 				has reached the original pull count.
 			*/
-			const prng = new PRNGWrapper(prngObj.seed, false);
-
-			for (let i = prngObj.pull; i > 0; --i) {
-				prng.random();
-			}
+			/* Jimmy: CHANGES: Create new PRNGWrapper with the state object of the old PRNG object.
+					Old: const prng = new PRNGWrapper(prngObj.seed, false);
+						 for (let i = prngObj.pull; i > 0; --i) {
+							 prng.random();
+						 } */
+			const prng = new PRNGWrapper('', { state: prngObj.state });
 
 			return prng;
 		}
