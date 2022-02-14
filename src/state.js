@@ -450,7 +450,9 @@ var State = (() => { // eslint-disable-line no-unused-vars, no-var
 			Truncate the history, if necessary, by discarding moments from the bottom.
 		*/
 		while (historySize() > Config.history.maxStates) {
-			_expired.push(_history.shift().title);
+			/* Jimmy: CHANGES: Stop the history being pushed onto _expire here.
+				Old: _expired.push(_history.shift().title); */
+			_history.shift().title;
 		}
 
 		/*
