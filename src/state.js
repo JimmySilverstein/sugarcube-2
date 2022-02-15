@@ -277,8 +277,8 @@ var State = (() => { // eslint-disable-line no-unused-vars, no-var
 			Restore the seedable PRNG.
 		*/
 		if (_prng !== null) {
-			/* Jimmy: CHANGES: Stop the history being pushed onto _expire here.
-				Old: _expired.push(_history.shift().title); */
+			/* Jimmy: CHANGES: Use prng property instead, which holds the PRNG state object. 
+							   Given to the unmarshal func to resume the state of the new PRNG.  */
 			if (_active.hasOwnProperty('prng')) {
 				_prng = PRNGWrapper.unmarshal({
 					state : _active.prng
@@ -436,7 +436,7 @@ var State = (() => { // eslint-disable-line no-unused-vars, no-var
 		while (historySize() > Config.history.maxStates) {
 			/* Jimmy: CHANGES: Stop the history being pushed onto _expire here.
 				Old: _expired.push(_history.shift().title); */
-			_history.shift().title;
+			_history.shift();
 		}
 
 		/*
