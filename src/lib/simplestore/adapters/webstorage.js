@@ -189,11 +189,11 @@ SimpleStore.adapters.push((() => {
 		}
 
 		static _serialize(obj) {
-			return LZString.compressToUTF16(JSON.stringify(obj));
+			return JSON.stringify(obj);
 		}
 
 		static _deserialize(str) {
-			return JSON.parse(LZString.decompressFromUTF16(str));
+			return JSON.parse(str);
 		}
 	}
 

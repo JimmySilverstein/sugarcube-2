@@ -244,11 +244,11 @@ SimpleStore.adapters.push((() => {
 		}
 
 		static _serialize(obj) {
-			return LZString.compressToBase64(JSON.stringify(obj));
+			return JSON.stringify(obj);
 		}
 
 		static _deserialize(str) {
-			return JSON.parse(LZString.decompressFromBase64(str));
+			return JSON.parse(str);
 		}
 	}
 
